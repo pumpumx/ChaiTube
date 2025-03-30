@@ -18,4 +18,11 @@ app.use(express.urlencoded({
 app.use(express.static("public"))
 app.use(cookieParser())
 
+<<<<<<< HEAD
+=======
+//Importing Routers , Good practice to import all router down , helps in file seggregation
+import userRouter from './routes/user.routes.js'
+app.use("/api/vi/users" , userRouter) 
+
+>>>>>>> 4a81c8a (Repo reinitialised)
 export default app
