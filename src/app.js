@@ -1,8 +1,8 @@
 import express from 'express'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
-const app = express()
 
+const app = express()
 app.use(cors({
     origin: process.env.CORS_ORIGIN , 
     credentials: true
@@ -18,11 +18,9 @@ app.use(express.urlencoded({
 app.use(express.static("public"))
 app.use(cookieParser())
 
-<<<<<<< HEAD
-=======
-//Importing Routers , Good practice to import all router down , helps in file seggregation
-import userRouter from './routes/user.routes.js'
-app.use("/api/vi/users" , userRouter) 
+//Importing Router , good practice to import all routes here.
+import userRoute from './routes/user.routes.js'
 
->>>>>>> 4a81c8a (Repo reinitialised)
+app.use("/api/v1/users" , userRoute)
+
 export default app
