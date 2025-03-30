@@ -15,11 +15,11 @@ import fs from "fs"
                 resource_type: "auto"
             })
             console.log("File is uploaded on cloudinary")
-            console.log(respone.url)
+            console.log(response.url)
             return response
         } catch (error) {
             fs.unlinkSync(localFilePath)  //Will remove locally saved temperory file as the upload operation got failed
-            return {err:error}
+            return"Cloudinary error"
         }
     }
 
