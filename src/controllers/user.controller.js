@@ -3,8 +3,8 @@ import {ApiError} from '../utils/apiError.js'
 import {User} from '../models/user.model.js'
 import uploadOnCloudinary from '../utils/cloudinary.js'
 import { ApiResponse } from '../utils/apiResponse.js'
-import fs from 'fs'
-
+import {generateAccessAndRefreshToken} from '../utils/tokens.js'
+import { access } from 'fs'
 const registerUser = asyncHandler( async (req , res)=>{
         
         //Take data from user 
@@ -18,6 +18,7 @@ const registerUser = asyncHandler( async (req , res)=>{
         //Send response of user registered sucessfully 
 
         const {fullName ,email , userName , password} = req.body
+        console.log(req.body)
         console.log("email ",email);
         
         if([fullName , email , userName,password].some((field)=>!field?.trim()))  {
@@ -33,13 +34,13 @@ const registerUser = asyncHandler( async (req , res)=>{
         }
 
         const avatarLocalPath = req.files?.avatar[0]?.path
-        const coverLocalPath  = req.files?.coverImage[0]?.path
+        const coverLocalPath  = req.files?.coverImage[0]?.path  
 
         if(!avatarLocalPath) throw new ApiError(400 , "Avatar is required")
 
         const avatarResponse= await uploadOnCloudinary(avatarLocalPath) 
         const coverResponse = await uploadOnCloudinary(coverLocalPath)
-
+    
         if(!avatarResponse) throw new ApiError(400, "Avatar not uploaded")
 
         const user = await User.create({
@@ -55,14 +56,58 @@ const registerUser = asyncHandler( async (req , res)=>{
        )
         if(!createdUser) throw new ApiError(500 , "Something went wrong while registering user")
 
-        fs.unlinkSync(avatarLocalPath)
-        fs.unlinkSync(coverLocalPath)
-
         return  res.status(201).json(
             new ApiResponse(200,createdUser , "user registered successfully")
         )
         
 })
+
+const loginUser = asyncHandler(async(req , res)=> {
+    //Take username || email  & password from the request body
+    //Make sure the fields are not empty || data validation
+    //Compare the Password and username provided with the pass in backend
+    //If both entries are correct -> generate accessToken and refreshToken
+    //Assign the tokens to the user 
+    //send cookie
+    //redirect the user to the desired page and generate a success response
+    const {email , username ,password} = req.body;
+    
+    if([username , password].some((field)=> field?.trim() === "")){
+        throw new ApiError(400 , "All fields are required")
+    }
+
+    const user  = await User.findOne({
+        $or: [{username} , {email}]
+    })
+
+    if(!user){
+        throw new ApiError(400 , "User Does not exist")
+    }
+
+    const passValidation = user.isPasswordCorrect(password)
+    if(!passValidation){
+        throw new ApiError(400 , "username or password is inCorrect")
+    }
+
+    const {accessToken , refreshToken} = await generateAccessAndRefreshToken(user._id)
+
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken") 
+   
+    const options = {
+        httpOnly: true ,
+        secure: true
+    }
+
+    return res
+    .status(200)
+    .cookie("accessToken",accessToken , options)
+    .cookie("refreshToken",refreshToken,options)
+    .json(
+        new ApiResponse(200 , "User Logged in sucessfully")
+    )
+})
+
 export {
-    registerUser
+    registerUser,
+    loginUser
 } 
