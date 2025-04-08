@@ -4,7 +4,7 @@ import {User} from '../models/user.model.js'
 import uploadOnCloudinary from '../utils/cloudinary.js'
 import { ApiResponse } from '../utils/apiResponse.js'
 import generateAccessAndRefreshToken from '../utils/tokens.js'
-import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
 const registerUser = asyncHandler( async (req , res)=>{
         
         //Take data from user 
@@ -138,8 +138,43 @@ const logoutUser = asyncHandler(async(req , res) => {
 
     
 })
+
+const refreshAccessToken = asyncHandler(async(req , res)=> {
+    const incomingRefreshToken = req.cookie.refreshToken || req.body.refreshToken
+
+    if(!incomingRefreshToken){
+        throw new ApiError(401 , "No refresh Token recieved")
+    }
+
+    const decodedToken = jwt.verify(incomingRefreshToken , process.env.REFRESH_TOKEN_SECRET)
+
+    if(!decodedToken){
+        throw new ApiError(400 , "Invalid decodedToken") 
+    }
+
+    const user = await User.findById(decodedToken._id)
+
+    if(!user){
+        throw new ApiError(500 , "Error finding user via decoded Token")
+    }
+
+    const {accessToken , newRefreshToken} = await generateAccessAndRefreshToken(user._id)
+
+    if(!accessToken || !newRefreshToken){
+        throw new ApiError(500 , "Error generating access/refreshToken ")
+    }
+
+    return res
+    .status(200)
+    .cookie(accessToken)
+    .cookie(newRefreshToken)
+    .json(
+        new ApiResponse(200 , {accessToken , newRefreshToken} , "New AccessToken Generated")
+    )
+})
 export {
     registerUser,
     loginUser,
-    logoutUser
+    logoutUser,
+    refreshAccessToken
 } 
