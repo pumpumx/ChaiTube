@@ -140,14 +140,15 @@ const logoutUser = asyncHandler(async(req , res) => {
 })
 
 const refreshAccessToken = asyncHandler(async(req , res)=> {
-    const incomingRefreshToken = req.cookie.refreshToken || req.body.refreshToken
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
 
     if(!incomingRefreshToken){
         throw new ApiError(401 , "No refresh Token recieved")
     }
 
+    console.log("token:  " , incomingRefreshToken)
     const decodedToken = jwt.verify(incomingRefreshToken , process.env.REFRESH_TOKEN_SECRET)
-
+cook
     if(!decodedToken){
         throw new ApiError(400 , "Invalid decodedToken") 
     }
