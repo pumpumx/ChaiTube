@@ -173,9 +173,108 @@ cook
         new ApiResponse(200 , {accessToken , newRefreshToken} , "New AccessToken Generated")
     )
 })
+
+const changeCurrentUserPassword = asyncHandler(async(req , res)=> {
+    const {oldPassword , newPassword , confirmPassword} = req.body
+
+    const user = User.findById(req.user?._id);
+    if(!user){
+        throw new ApiError(500 , "error getting user")
+    }
+    const passValidation = await user.isPasswordCorrect(oldPassword)
+
+    if(!passValidation) throw new ApiError(400 , "incorrect Old password")
+    
+    if(!(newPassword===confirmPassword)){
+        throw new ApiError(400 , "New password does not match with confirm password")
+    }
+
+    user.password = newPassword
+    await user.save({vaidateBeforeSave: false})
+    
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200 , "Password Updated Successfully")
+    )
+
+
+})
+
+const getCurrentUser = asyncHandler(async(req , res)=>{
+    const user = req.user
+
+    if(!user) throw ApiError(401 , "Unauthorized request")
+
+    return res
+    .status(200)
+    .json(
+        ApiResponse(200 , {user} , "Current user retrieved")
+    )
+})
+
+const updateAccountDetails = asyncHandler(async(req , res)=>{
+    const {fullName , email} = req.body
+
+    if(!(fullName && email)) throw new ApiError(400 , "Fullname or email required")
+    
+    if(user.fullName===fullName || user.email === email) throw new ApiError(400 , "Different fullname or email value required")  
+
+        const user = await User.findByIdAndUpdate(
+            req.user?._id , 
+            {
+                $set:{
+                    fullName:fullName,
+                    email:email 
+                }
+            },
+            {new:true}
+        ).select("-password -refreshToken")
+    
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200 , {user} ,  "Details saved successfully")
+    )
+})
+
+const deleteUserAccount = asyncHandler(async(req , res) => {
+    const user  = req.user
+    if(!user) throw new ApiError(400 , "User not found while deleting account")
+    await User.findByIdAndDelete(user._id)
+
+    return res
+    .status(200)
+    .clearCookie("accessToken")
+    .clearCookie("refreshToken")
+    .json(
+        new ApiResponse(200 , "User account deleted successfully")
+    )
+})
+
+const updateUserCoverImage = asyncHandler(async(req , res)=>{
+    const updateCoverImage = req.files?.coverImage[0]?.path || ""
+    if(!updateCoverImage) throw new ApiError(400 , "Upload Cover Image")
+
+    const updatedCoverImagePath = await uploadOnCloudinary(updateCoverImage)
+    if(!updatedCoverImagePath) throw new ApiError(500 , "updatedCoverImage Upload failed")
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200 , updatedCoverImagePath.url , "Cover Image updated Sucessfully")
+    )
+    
+})
 export {
     registerUser,
     loginUser,
     logoutUser,
-    refreshAccessToken
+    refreshAccessToken,
+    changeCurrentUserPassword,
+    getCurrentUser,
+    updateAccountDetails,
+    deleteUserAccount,
+    updateUserCoverImage
+
 } 
